@@ -1,11 +1,9 @@
 # research_agent/agents/formatter.py
-import os
 from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm
 
 formatter_agent = LlmAgent(
     name="formatter",
-    model=LiteLlm(model=f"azure/{os.environ['AZURE_DEPLOYMENT_ID']}"),
+    model="gemini-2.0-flash",
     instruction="""You are a scientific report writer. You will receive a structured
 literature review in JSON format (in session state as `final_review`).
 

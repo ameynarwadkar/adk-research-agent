@@ -123,7 +123,8 @@ adk-agent/
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- An **Azure OpenAI** resource with a model deployment
+- A **Google Cloud project** with Vertex AI enabled
+- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud`)
 
 ### 1. Clone and install
 
@@ -133,33 +134,29 @@ cd adk-agent
 
 # Create venv and install dependencies
 uv sync
-
-# Install LiteLLM (Azure OpenAI bridge)
-uv pip install litellm
 ```
 
-### 2. Configure environment
+### 2. Authenticate with Google Cloud
+
+```bash
+# One-time login (sets Application Default Credentials)
+gcloud auth application-default login
+
+# Set your project
+gcloud config set project YOUR_PROJECT_ID
+```
+
+### 3. Configure environment
 
 Create `research_agent/.env`:
 
 ```env
-GOOGLE_GENAI_USE_VERTEXAI=FALSE
-AZURE_API_KEY=<your Azure OpenAI key>
-AZURE_API_BASE=https://<your-resource>.openai.azure.com/
-AZURE_API_VERSION=2025-04-01-preview
-AZURE_DEPLOYMENT_ID=<your deployment name, e.g. gpt-4o>
+GOOGLE_GENAI_USE_VERTEXAI=TRUE
+GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
 ```
 
-**Where to find these values in the Azure Portal:**
-
-| Variable | Location |
-|---|---|
-| `AZURE_API_KEY` | Azure OpenAI resource → **Keys and Endpoints** → Key 1 |
-| `AZURE_API_BASE` | Same page → **Endpoint** |
-| `AZURE_API_VERSION` | Match the version shown in Azure AI Foundry |
-| `AZURE_DEPLOYMENT_ID` | Azure AI Foundry → **Deployments** → your model name |
-
-### 3. Run
+### 4. Run
 
 ```bash
 adk web research_agent
@@ -212,7 +209,9 @@ of intermittent fasting in adults with type 2 diabetes...
 - All agents share session state via ADK's built-in session mechanism. Each agent writes its output to a named key (`search_guidance`, `search_results`, etc.) which downstream agents read via `{variable}` template substitution in instructions.
 - The `retrylogic` package provides an `@retry` decorator with exponential backoff + jitter and a `CircuitBreaker` context manager for protecting external API calls (ArXiv, PubMed, Semantic Scholar).
 - The `Paper` Pydantic model is the shared data contract between all tools and agents — every tool returns `Paper.model_dump()` dicts for consistent serialisation.
-- Azure OpenAI is connected via [LiteLLM](https://docs.litellm.ai/) using ADK's `LiteLlm` model wrapper, making the backend swappable (Ollama, OpenAI, Anthropic, etc.) by changing a single env var.
+- Models are specified as plain strings (`"gemini-2.0-flash"`); ADK handles authentication automatically via Application Default Credentials.
+
+> **Want to use Azure OpenAI instead?** See the [`azure-integration`](../../tree/azure-integration) branch, which uses [LiteLLM](https://docs.litellm.ai/) to swap in any Azure / OpenAI / Anthropic model.
 
 ---
 
@@ -224,4 +223,3 @@ of intermittent fasting in adults with type 2 diabetes...
 | `pydantic >= 2.0` | Data models (Paper, Author, PaperCollection) |
 | `httpx >= 0.27` | HTTP client for PubMed + Semantic Scholar |
 | `arxiv >= 4.0.0` | ArXiv search library |
-| `litellm` | Azure OpenAI (and any other LLM provider) bridge |

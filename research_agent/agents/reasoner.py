@@ -1,11 +1,9 @@
 # research_agent/agents/reasoner.py
-import os
 from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm
 
 reasoner_agent = LlmAgent(
     name="reasoner",
-    model=LiteLlm(model=f"azure/{os.environ['AZURE_DEPLOYMENT_ID']}"),
+    model="gemini-2.0-flash",
     instruction="""You are an evidence quality assessor. Given:
     - Search results: {search_results}
     - Analysis: {analysis_results}

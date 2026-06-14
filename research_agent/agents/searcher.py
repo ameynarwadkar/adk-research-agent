@@ -1,7 +1,5 @@
 # research_agent/agents/searcher.py
-import os
 from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm
 from research_agent.tools.arxiv_search import search_arxiv
 from research_agent.tools.pubmed_search import search_pubmed
 from research_agent.tools.openalex_search import search_openalex
@@ -12,7 +10,7 @@ from research_agent.tools.citation_traversal import traverse_citations
 
 searcher_agent = LlmAgent(
     name="searcher",
-    model=LiteLlm(model=f"azure/{os.environ['AZURE_DEPLOYMENT_ID']}"),
+    model="gemini-2.0-flash",
     instruction="""You are a research paper searcher. Use the search guidance provided below
 to find relevant academic papers.
 
