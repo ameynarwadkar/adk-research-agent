@@ -10,7 +10,7 @@ from research_agent.tools.citation_traversal import traverse_citations
 
 searcher_agent = LlmAgent(
     name="searcher",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     instruction="""You are a research paper searcher. Use the search guidance provided below
 to find relevant academic papers.
 

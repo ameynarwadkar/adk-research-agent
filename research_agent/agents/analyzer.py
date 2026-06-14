@@ -5,7 +5,7 @@ from research_agent.tools.abstract_extractor import extract_abstracts
 
 analyzer_agent = LlmAgent(
     name="analyzer",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     instruction="""You are a research analyzer. Given the search results below, perform
 a thematic analysis of the papers found.
 

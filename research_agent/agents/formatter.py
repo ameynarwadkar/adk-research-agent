@@ -3,7 +3,7 @@ from google.adk.agents import LlmAgent
 
 formatter_agent = LlmAgent(
     name="formatter",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     instruction="""You are a scientific report writer. You will receive a structured
 literature review in JSON format (in session state as `final_review`).
 

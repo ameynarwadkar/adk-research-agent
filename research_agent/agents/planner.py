@@ -3,7 +3,7 @@ from google.adk.agents import LlmAgent
 
 planner_agent = LlmAgent(
     name="planner",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     instruction="""You are a research planning assistant. Given a research question,
     produce search guidance: 3-5 search queries, year ranges, key terms,
     fields of study, and priorities (foundational vs. recent).""",

@@ -3,7 +3,7 @@ from google.adk.agents import LlmAgent
 
 synthesizer_agent = LlmAgent(
     name="synthesizer",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     instruction="""You are an expert academic researcher. Given:
     - Research question: (see original question in the conversation above)
     - Search results: {search_results}
