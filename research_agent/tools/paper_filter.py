@@ -35,7 +35,12 @@ def filter_papers(
     if not papers:
         return {"papers": [], "count": 0, "filters_applied": []}
 
-    parsed = [Paper.model_validate(p) for p in papers]
+    parsed = []
+    for p in papers:
+        try:
+            parsed.append(Paper.model_validate(p))
+        except Exception:
+            logger.warning("Skipping invalid paper dict in filter_papers")
     original_count = len(parsed)
     filters_applied: list[str] = []
 

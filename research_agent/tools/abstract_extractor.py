@@ -26,7 +26,12 @@ def extract_abstracts(
     if not papers:
         return {"digests": [], "total_papers": 0, "with_abstract": 0, "without_text": 0}
 
-    parsed = [Paper.model_validate(p) for p in papers]
+    parsed = []
+    for p in papers:
+        try:
+            parsed.append(Paper.model_validate(p))
+        except Exception:
+            logger.warning("Skipping invalid paper dict in extract_abstracts")
 
     digests: list[dict] = []
     with_abstract = 0
