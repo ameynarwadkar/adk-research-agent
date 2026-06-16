@@ -23,7 +23,7 @@ For each outcome (e.g., Blood Glucose / HbA1c, Insulin Sensitivity, BMI):
 ### [Outcome Name]
 - **Finding**: [plain-language summary of what the evidence shows]
 - **Strength**: [strong / moderate / weak — infer from the evidence quality assessment]
-- **Key papers**: cite inline as (Author et al., PMID:XXXXXXX)
+- **Key papers**: cite inline wrapped in a colored span: <span style="color: #0366d6;">(Author et al., PMID:XXXXXXX)</span>
 - Quote one or two relevant evidence excerpts in blockquotes (`> "..."`).
 
 ## Primary Trials
@@ -42,7 +42,7 @@ A concise 3–5 sentence paragraph directly answering the original research ques
 
 Rules:
 - Write in third-person academic prose (no "I").
-- Every factual claim must be followed by an inline PMID citation like (PMID:XXXXXXXX).
+- Every factual claim must be followed by an inline PMID citation wrapped in a colored span like <span style="color: #0366d6;">(PMID:XXXXXXXX)</span>.
 - Do NOT invent paper IDs or findings not present in the JSON.
 - Use **bold** for key terms and > blockquotes for direct excerpts.
 - Output ONLY the markdown — no preamble, no "Here is your report:", no trailing commentary.

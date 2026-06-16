@@ -24,11 +24,13 @@ dependencies = [
     { name = "arxiv" },
     { name = "google-adk" },
     { name = "httpx" },
-    { name = "litellm" },
     { name = "pydantic" },
 ]
 
 [package.optional-dependencies]
+azure = [
+    { name = "litellm" },
+]
 dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -40,13 +42,13 @@ requires-dist = [
     { name = "arxiv", specifier = ">=4.0.0" },
     { name = "google-adk", specifier = ">=2.2.0" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "litellm" },
+    { name = "litellm", marker = "extra == 'azure'" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["azure", "dev"]
 
 [[package]]
 name = "aiohappyeyeballs"
