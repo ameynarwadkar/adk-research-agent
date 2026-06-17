@@ -1,77 +1,27 @@
 # Research Agent
 
-A multi-agent research assistant built with [Google ADK](https://google.github.io/adk-docs/) that automatically searches academic databases, analyzes papers, assesses evidence quality, and produces a formatted literature review — given a single research question.
+A multi-agent research assistant built with [Google ADK](https://google.github.io/adk-docs/) that automatically searches academic databases, analyzes papers, assesses evidence quality, and produces a formatted literature review - given a single research question.
 
----
+
 
 ## What It Does
 
 You type a research question. The pipeline does the rest:
 
 1. Plans targeted search strategies
-2. Searches ArXiv + PubMed + Semantic Scholar
+2. Searches ArXiv + PubMed + OpenAlex
 3. Analyzes themes and clusters findings
 4. Assesses evidence quality and detects gaps
 5. Synthesizes results into a structured review
 6. Formats the output as a clean markdown report
 
----
+
 
 ## Agent Pipeline
 
-```
-User Question
-     │
-     ▼
-┌─────────────┐
-│   Planner   │  Generates 3–5 search queries, year ranges, key terms,
-│             │  fields of study, and a foundational-vs-recent priority plan.
-│             │  ── output_key: search_guidance
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Searcher  │  Runs multiple queries across ArXiv and PubMed.
-│             │  Filters, ranks, and extracts abstracts. Optionally
-│             │  traverses the citation graph via Semantic Scholar.
-│             │  ── output_key: search_results
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Analyzer  │  Performs thematic clustering on the retrieved papers.
-│             │  Groups findings into 3–6 themes with evidence strength
-│             │  ratings (strong / moderate / weak).
-│             │  ── output_key: analysis_results
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Reasoner  │  Grades evidence quality, verifies claims against
-│             │  abstracts, and identifies coverage gaps. Outputs
-│             │  structured JSON with scores and re-query suggestions.
-│             │  ── output_key: reasoning_output
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Synthesizer │  Produces a structured JSON literature review with
-│             │  outcomes, evidence excerpts, trial summaries, and
-│             │  a bottom-line answer.
-│             │  ── output_key: final_review
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Formatter  │  Converts the JSON review into a readable markdown
-│             │  prose report with citations, blockquotes, and sections.
-│             │  ── output_key: formatted_report
-└─────────────┘
-```
+![Agent Pipeline Graph](research_agent/screenshots/1.png)
 
-![Agent Pipeline Graph](research_agent/screenshots/pipeline.png)
-
-### Tools available to agents
+### Tools (currently available to agents)
 
 | Tool | Used by | Description |
 |---|---|---|
@@ -90,7 +40,7 @@ User Question
 ```
 adk-agent/
 ├── research_agent/
-│   ├── agent.py              # Root SequentialAgent — wires the pipeline
+│   ├── agent.py              # Main SequentialAgent - wires the pipeline
 │   ├── agents/
 │   │   ├── planner.py
 │   │   ├── searcher.py
@@ -108,14 +58,14 @@ adk-agent/
 │   ├── models/
 │   │   └── paper.py          # Shared Paper / Author / PaperCollection models
 │   └── retrylogic/
-│       ├── retry.py          # Exponential backoff decorator + retry_async
-│       ├── circuit_breaker.py
-│       └── exceptions.py
+│       ├── retry.py          # Decorator + retry_async
+│       ├── circuit_breaker.py  # Circuit Breaker
+│       └── exceptions.py     # Exceptions
 ├── pyproject.toml
 └── README.md
 ```
 
----
+
 
 ## Setup
 
@@ -129,10 +79,9 @@ adk-agent/
 ### 1. Clone and install
 
 ```bash
-git clone <repo-url>
-cd adk-agent
+git clone https://github.com/ameynarwadkar/adk-research-agent.git
+cd adk-research-agent
 
-# Create venv and install dependencies
 uv sync
 ```
 
@@ -150,6 +99,12 @@ gcloud config set project YOUR_PROJECT_ID
 
 Create `research_agent/.env`:
 
+```bash
+cp research_agent/.env.example research_agent/.env
+```
+
+Edit the `.env` file and replace the placeholder values with your actual values:
+
 ```env
 GOOGLE_GENAI_USE_VERTEXAI=TRUE
 GOOGLE_CLOUD_PROJECT=your-gcp-project-id
@@ -164,9 +119,8 @@ adk web research_agent
 
 Open [http://localhost:8000](http://localhost:8000) in your browser.
 
----
-
-## Example Prompt
+## Test it yourself!
+### Example Prompt
 
 ```
 Does intermittent fasting improve metabolic health markers (blood glucose,
@@ -202,18 +156,14 @@ Evidence from multiple meta-analyses supports short-term glycaemic benefits
 of intermittent fasting in adults with type 2 diabetes...
 ```
 
----
 
 ## Architecture Notes
 
 - All agents share session state via ADK's built-in session mechanism. Each agent writes its output to a named key (`search_guidance`, `search_results`, etc.) which downstream agents read via `{variable}` template substitution in instructions.
 - The `retrylogic` package provides an `@retry` decorator with exponential backoff + jitter and a `CircuitBreaker` context manager for protecting external API calls (ArXiv, PubMed, Semantic Scholar).
-- The `Paper` Pydantic model is the shared data contract between all tools and agents — every tool returns `Paper.model_dump()` dicts for consistent serialisation.
+- The `Paper` Pydantic model is the shared data contract between all tools and agents and every tool returns `Paper.model_dump()` dicts for consistent serialisation.
 - Models are specified as plain strings (`"gemini-2.0-flash"`); ADK handles authentication automatically via Application Default Credentials.
 
-> **Want to use Azure OpenAI instead?** See the [`azure-integration`](../../tree/azure-integration) branch, which uses [LiteLLM](https://docs.litellm.ai/) to swap in any Azure / OpenAI / Anthropic model.
-
----
 
 ## Dependencies
 
