@@ -358,6 +358,17 @@ function executeResearch() {
   els.consoleStream.innerHTML = "";
   els.toolPillsList.innerHTML = `<span class="empty-shelf shadow-none text-xs text-gray-500">None invoked yet</span>`;
   els.activeAgentDisplay.textContent = "clarifier";
+  
+  // Set skeleton loader for the report preview
+  els.reportBodyContainer.innerHTML = `
+    <div class="report-skeleton-container">
+      <div class="skeleton-shimmer-row header"></div>
+      <div class="skeleton-shimmer-row body-lg"></div>
+      <div class="skeleton-shimmer-row body-md"></div>
+      <div class="skeleton-shimmer-row body-lg"></div>
+      <div class="skeleton-shimmer-row body-sm"></div>
+    </div>
+  `;
 
   // Reset pipeline header to active run state
   if (els.pipelineStatusBadge) {
@@ -840,13 +851,13 @@ function drawEdges() {
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   defs.innerHTML = `
     <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(255,255,255,0.15)" />
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(255,255,255,0.1)" />
     </marker>
     <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
     </marker>
     <marker id="arrow-completed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
     </marker>
   `;
   els.svgCanvas.appendChild(defs);
@@ -886,21 +897,21 @@ function drawEdges() {
     path.setAttribute("d", pathAttr);
     
     // State-based Styling mapping
-    let strokeColor = "rgba(255, 255, 255, 0.08)";
+    let strokeColor = "rgba(255, 255, 255, 0.05)";
     let markerId = "arrow";
     let isDashed = type === "flow";
 
     if (isCompleted) {
-      strokeColor = "#34d399";
+      strokeColor = "#10b981";
       markerId = "arrow-completed";
       isDashed = false;
     } else if (isActive) {
-      strokeColor = "#818cf8";
+      strokeColor = "#06b6d4";
       markerId = "arrow-active";
     }
 
     path.setAttribute("stroke", strokeColor);
-    path.setAttribute("stroke-width", isActive ? "2" : "1.3");
+    path.setAttribute("stroke-width", isActive ? "2.2" : "1.3");
     path.setAttribute("fill", "none");
     path.setAttribute("marker-end", `url(#${markerId})`);
     
@@ -914,7 +925,7 @@ function drawEdges() {
     if (isActive) {
       const animatedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       animatedPath.setAttribute("d", pathAttr);
-      animatedPath.setAttribute("stroke", "#a78bfa");
+      animatedPath.setAttribute("stroke", "#14b8a6");
       animatedPath.setAttribute("stroke-width", "2.5");
       animatedPath.setAttribute("fill", "none");
       animatedPath.className.baseVal = "dag-edge-animated";
@@ -1031,8 +1042,8 @@ function pulseEdgeAnimation(agentName: string, toolNodeId: string) {
 
   // Spawn an overlay particle traveling along this spec
   const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  dot.setAttribute("r", "5");
-  dot.setAttribute("fill", "#c084fc");
+  dot.setAttribute("r", "4.5");
+  dot.setAttribute("fill", "#14b8a6");
   
   const animateMotion = document.createElementNS("http://www.w3.org/2000/svg", "animateMotion");
   animateMotion.setAttribute("path", pathAttr);
