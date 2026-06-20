@@ -36,6 +36,9 @@ const els = {
   btnStartResearch: document.getElementById("btn-start-research") as HTMLButtonElement,
   btnNewResearch: document.getElementById("btn-new-research") as HTMLButtonElement,
   btnCancelPipeline: document.getElementById("btn-cancel-pipeline") as HTMLButtonElement,
+  btnViewPipeline: document.getElementById("btn-view-pipeline") as HTMLButtonElement,
+  btnViewReport: document.getElementById("btn-view-report") as HTMLButtonElement,
+  pipelineStatusBadge: document.getElementById("pipeline-status-badge") as HTMLElement,
   btnCopyReport: document.getElementById("btn-copy-report") as HTMLButtonElement,
   btnCopyText: document.getElementById("btn-copy-text") as HTMLElement,
   btnRestartFromReport: document.getElementById("btn-restart-from-report") as HTMLButtonElement,
@@ -120,6 +123,19 @@ function setupEventListeners() {
     cancelActivePipeline();
   });
 
+  // View Pipeline from Report (toggle back to DAG)
+  els.btnViewPipeline.addEventListener("click", () => {
+    switchToView("pipeline");
+  });
+
+  // View Report from Pipeline (after completion)
+  els.btnViewReport.addEventListener("click", () => {
+    const currentSession = sessions.find(s => s.id === activeSessionId);
+    if (currentSession && currentSession.status === "completed") {
+      displayMarkdownReport(currentSession);
+    }
+  });
+
   // Copy Markdown Clipboard action
   els.btnCopyReport.addEventListener("click", () => {
     copyMarkdownToClipboard();
@@ -143,9 +159,15 @@ function switchToView(view: "hero" | "pipeline" | "report") {
     els.queryInput.focus();
   } else if (view === "pipeline") {
     els.viewPipeline.classList.add("active");
+    // If navigating back to a completed pipeline, restore completed visual state
+    const currentSession = sessions.find(s => s.id === activeSessionId);
+    if (currentSession?.status === "completed") {
+      setPipelineCompletedAppearance(currentSession);
+    }
+    // Always redraw edges after the panel becomes visible
+    requestAnimationFrame(() => drawEdges());
   } else if (view === "report") {
     els.viewReport.classList.add("active");
-    // Repainting edge nodes safely to clean graphics memory
     clearTimeout(edgeDrawTimeout);
   }
 }
@@ -336,6 +358,16 @@ function executeResearch() {
   els.consoleStream.innerHTML = "";
   els.toolPillsList.innerHTML = `<span class="empty-shelf shadow-none text-xs text-gray-500">None invoked yet</span>`;
   els.activeAgentDisplay.textContent = "clarifier";
+
+  // Reset pipeline header to active run state
+  if (els.pipelineStatusBadge) {
+    els.pipelineStatusBadge.textContent = "ACTIVE RUN";
+    els.pipelineStatusBadge.style.background = "";
+    els.pipelineStatusBadge.style.color = "";
+    els.pipelineStatusBadge.style.borderColor = "";
+  }
+  if (els.btnCancelPipeline) els.btnCancelPipeline.style.display = "";
+  if (els.btnViewReport) els.btnViewReport.style.display = "none";
   
   switchToView("pipeline");
   drawEdges();
@@ -591,6 +623,16 @@ function completePipelineSuccess(markdownText: string) {
   appendConsoleLine("pipeline_complete: Full literature review compiled successfully.", "system-log-line text-emerald-400");
   drawEdges();
 
+  // Update pipeline header to completed state
+  if (els.pipelineStatusBadge) {
+    els.pipelineStatusBadge.textContent = "COMPLETED";
+    els.pipelineStatusBadge.style.background = "rgba(52, 211, 153, 0.15)";
+    els.pipelineStatusBadge.style.color = "#34d399";
+    els.pipelineStatusBadge.style.borderColor = "rgba(52, 211, 153, 0.3)";
+  }
+  if (els.btnCancelPipeline) els.btnCancelPipeline.style.display = "none";
+  if (els.btnViewReport) els.btnViewReport.style.display = "";
+
   const currentSession = sessions.find(s => s.id === activeSessionId);
   if (currentSession) {
     currentSession.status = "completed";
@@ -604,6 +646,50 @@ function completePipelineSuccess(markdownText: string) {
       triggerToast("Literature research pipeline completed successfully!", "success");
     }, 1500);
   }
+}
+
+// Restore the completed pipeline visual state when navigating back from report view
+function setPipelineCompletedAppearance(session: ResearchSession) {
+  // Restore query display
+  els.pipelineQueryDisplay.textContent = session.query;
+
+  // Update status badge
+  if (els.pipelineStatusBadge) {
+    els.pipelineStatusBadge.textContent = "COMPLETED";
+    els.pipelineStatusBadge.style.background = "rgba(52, 211, 153, 0.15)";
+    els.pipelineStatusBadge.style.color = "#34d399";
+    els.pipelineStatusBadge.style.borderColor = "rgba(52, 211, 153, 0.3)";
+  }
+
+  // Show/hide correct buttons
+  if (els.btnCancelPipeline) els.btnCancelPipeline.style.display = "none";
+  if (els.btnViewReport) els.btnViewReport.style.display = "";
+
+  // Timer display
+  if (session.elapsedTime) {
+    els.pipelineTimer.textContent = session.elapsedTime;
+  }
+
+  // Restore active agent display
+  els.activeAgentDisplay.textContent = "formatter";
+
+  // Restore console logs
+  els.consoleStream.innerHTML = "";
+  session.logs.forEach(log => {
+    const line = document.createElement("div");
+    line.className = "system-log-line";
+    line.textContent = log;
+    els.consoleStream.appendChild(line);
+  });
+  els.consoleStream.scrollTop = els.consoleStream.scrollHeight;
+
+  // Mark all nodes as completed in the DAG
+  AGENT_ORDER.forEach(agent => {
+    const node = document.getElementById(`node-${agent}`);
+    if (node) node.className = "dag-node agent-node completed";
+  });
+  const rootNode = document.getElementById("node-root");
+  if (rootNode) rootNode.className = "dag-node root-node completed";
 }
 
 // Terminate pipeline in error state

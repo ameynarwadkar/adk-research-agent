@@ -569,13 +569,6 @@ body {
   max-width: 70%;
 }
 
-.meta-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: var(--accent-purple);
-  letter-spacing: 0.1em;
-}
 
 .active-query-text {
   font-size: 0.95rem;
@@ -606,6 +599,23 @@ body {
   border-color: rgba(251, 113, 133, 0.3);
 }
 
+.pipeline-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meta-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+  letter-spacing: 0.1em;
+  transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
 /* THE DAG GRAPH AREA */
 .dag-wrapper {
   flex: 1;
