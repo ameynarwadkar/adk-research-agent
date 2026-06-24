@@ -1,5 +1,6 @@
 import "./style.css";
 import { marked } from "marked";
+import { inject } from '@vercel/analytics';
 
 // Types
 interface ResearchSession {
@@ -69,6 +70,9 @@ const AGENT_ORDER = [
 
 // Initialize Application
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Vercel Analytics
+  inject();
+  
   loadSessions();
   setupEventListeners();
   drawEdges();
