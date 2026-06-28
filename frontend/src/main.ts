@@ -306,6 +306,13 @@ function executeResearch() {
     return;
   }
 
+  let pass = localStorage.getItem("research_app_pass");
+  if (!pass) {
+    pass = prompt("Please enter the access password to run research queries:");
+    if (!pass) return;
+    localStorage.setItem("research_app_pass", pass);
+  }
+
   // Create unique Session record
   const newSessionId = "session_" + Date.now();
   const session: ResearchSession = {
@@ -337,7 +344,7 @@ function executeResearch() {
 
   // Establish SSE Streaming interface
   const encodedQuery = encodeURIComponent(query);
-  const streamUrl = `/api/research/stream?query=${encodedQuery}&session_id=${newSessionId}`;
+  const streamUrl = `/api/research/stream?query=${encodedQuery}&session_id=${newSessionId}&pass=${encodeURIComponent(pass)}`;
   
   appendConsoleLine("Initial system validation OK.", "system-log-line");
   appendConsoleLine("Requesting real-time SSE stream...", "system-log-line text-indigo-400");
@@ -398,6 +405,9 @@ function executeResearch() {
   eventSource.addEventListener("error_event", (e: MessageEvent) => {
     try {
       const data = JSON.parse(e.data);
+      if (data.message && data.message.includes("Unauthorized")) {
+        localStorage.removeItem("research_app_pass");
+      }
       terminatePipelineError(data.message);
     } catch (err) {
       console.error(err);

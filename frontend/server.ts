@@ -46,7 +46,18 @@ async function startServer() {
   app.get("/api/research/stream", async (req, res) => {
     const rawQuery = req.query.query as string || "";
     const query = decodeURIComponent(rawQuery).trim() || "What are the clinical developments in mRNA cancer vaccines?";
+    const pass = req.query.pass as string || "";
     
+    // Authorization check
+    if (process.env.APP_PASSWORD && pass !== process.env.APP_PASSWORD) {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.write(`event: error_event\ndata: {"message": "Unauthorized: Invalid access password."}\n\n`);
+      res.end();
+      return;
+    }
+
     console.log(`Starting Research Stream for: "${query}"`);
 
     // Prepare SSE Headers
