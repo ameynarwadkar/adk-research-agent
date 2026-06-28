@@ -69,6 +69,7 @@ class TestSearchOpenalex:
         resp = MagicMock()
         resp.json.return_value = data
         resp.raise_for_status = MagicMock()
+        resp.status_code = 200
         return resp
 
     @patch("research_agent.tools.openalex_search.httpx.Client")

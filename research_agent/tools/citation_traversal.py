@@ -49,33 +49,49 @@ def _parse_s2_paper(data: dict[str, Any]) -> Paper | None:
     )
 
 
-def _fetch_citations(
+from research_agent.retrylogic import retry
+from research_agent.retrylogic.exceptions import RateLimitError, ExternalAPIError
+from research_agent.retrylogic.breakers import s2_breaker
+from research_agent.tools.cache import get_cached_response, set_cached_response
+
+
+@retry(
+    max_attempts=3,
+    base_delay=1.2,
+    max_delay=10.0,
+    retry_on=(RateLimitError, ExternalAPIError),
+)
+def _fetch_citations_api(
     client: httpx.Client,
     paper_id: str,
-    endpoint: str,  # "citations" or "references"
+    endpoint: str,
 ) -> list[Paper]:
-    """Fetch forward citations or backward references for a paper."""
-    try:
-        # Rate limiting: S2 unauthenticated ~1 req/sec
-        time.sleep(1.2)
+    headers = {
+        "User-Agent": "ADK-ResearchAgent/0.1.0 (mailto:amey@example.com)",
+    }
 
-        response = client.get(
-            f"{_S2_BASE_URL}/paper/{paper_id}/{endpoint}",
-            params={"fields": _PAPER_FIELDS, "limit": 20},
-        )
+    # Rate limiting: S2 unauthenticated ~1 req/sec
+    time.sleep(1.2)
 
-        if response.status_code == 429:
-            retry_after = float(response.headers.get("Retry-After", "5"))
-            logger.info("S2 rate limited, waiting %.0fs", retry_after)
-            time.sleep(retry_after)
+    with s2_breaker:
+        try:
             response = client.get(
                 f"{_S2_BASE_URL}/paper/{paper_id}/{endpoint}",
                 params={"fields": _PAPER_FIELDS, "limit": 20},
+                headers=headers,
             )
+        except httpx.RequestError as e:
+            raise ExternalAPIError(f"Semantic Scholar network error: {e}", service_name="SemanticScholar")
 
-        if response.status_code >= 400:
-            logger.warning("S2 %s returned %d for %s", endpoint, response.status_code, paper_id)
-            return []
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", "5"))
+            raise RateLimitError("Semantic Scholar rate limited", service_name="SemanticScholar", retry_after=retry_after)
+        elif response.status_code >= 400:
+            raise ExternalAPIError(
+                f"Semantic Scholar API failed with status {response.status_code}",
+                status_code=response.status_code,
+                service_name="SemanticScholar",
+            )
 
         data = response.json()
         key = "citingPaper" if endpoint == "citations" else "citedPaper"
@@ -87,11 +103,32 @@ def _fetch_citations(
 
         return papers
 
+
+def _fetch_citations(
+    client: httpx.Client,
+    paper_id: str,
+    endpoint: str,  # "citations" or "references"
+) -> list[Paper]:
+    """Fetch forward citations or backward references for a paper (cached wrapper)."""
+    cache_key = f"paper:{paper_id}|endpoint:{endpoint}"
+    cached = get_cached_response("semanticscholar", cache_key)
+    if cached:
+        return [Paper.model_validate(p) for p in cached["papers"]]
+
+    try:
+        papers = _fetch_citations_api(client, paper_id, endpoint)
+        set_cached_response(
+            "semanticscholar",
+            cache_key,
+            {"papers": [p.model_dump() for p in papers]}
+        )
+        return papers
     except Exception as e:
         logger.warning("Failed to fetch %s for %s: %s", endpoint, paper_id, e)
         return []
 
 
+@observe()
 def traverse_citations(
     paper_id: str,
     direction: str = "both",

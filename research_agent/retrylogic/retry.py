@@ -65,11 +65,16 @@ def retry(
     ),
     on_retry: Callable[[int, Exception, float], None] | None = None,
 ) -> Callable[[F], F]:
-    """Decorator for retrying async functions with exponential backoff.
+    """Decorator for retrying async or sync functions with exponential backoff.
 
-    Usage:
+    Usage (Async):
         @retry(max_attempts=3, retry_on=(RateLimitError,))
         async def call_api():
+            ...
+
+    Usage (Sync):
+        @retry(max_attempts=3, retry_on=(RateLimitError,))
+        def call_api():
             ...
     """
     config = RetryConfig(
@@ -82,43 +87,83 @@ def retry(
     )
 
     def decorator(func: F) -> F:
-        @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception: Exception | None = None
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                last_exception: Exception | None = None
 
-            for attempt in range(config.max_attempts):
-                try:
-                    return await func(*args, **kwargs)
-                except config.retry_on as e:
-                    last_exception = e
+                for attempt in range(config.max_attempts):
+                    try:
+                        return await func(*args, **kwargs)
+                    except config.retry_on as e:
+                        last_exception = e
 
-                    if attempt == config.max_attempts - 1:
-                        logger.error(
-                            "Retry exhausted for %s after %d attempts: %s",
-                            func.__name__, config.max_attempts, e,
+                        if attempt == config.max_attempts - 1:
+                            logger.error(
+                                "Retry exhausted for %s after %d attempts: %s",
+                                func.__name__, config.max_attempts, e,
+                            )
+                            raise
+
+                        if isinstance(e, RateLimitError) and e.retry_after is not None:
+                            delay = e.retry_after
+                        else:
+                            delay = config.calculate_delay(attempt)
+
+                        logger.warning(
+                            "Retry %d/%d for %s: %s (delay: %.1fs)",
+                            attempt + 1, config.max_attempts, func.__name__, e, delay,
                         )
-                        raise
 
-                    if isinstance(e, RateLimitError) and e.retry_after is not None:
-                        delay = e.retry_after
-                    else:
-                        delay = config.calculate_delay(attempt)
+                        if on_retry:
+                            on_retry(attempt + 1, e, delay)
 
-                    logger.warning(
-                        "Retry %d/%d for %s: %s (delay: %.1fs)",
-                        attempt + 1, config.max_attempts, func.__name__, e, delay,
-                    )
+                        await asyncio.sleep(delay)
 
-                    if on_retry:
-                        on_retry(attempt + 1, e, delay)
+                if last_exception:
+                    raise last_exception
+                raise RuntimeError("Retry logic error: no exception captured")
 
-                    await asyncio.sleep(delay)
+            return async_wrapper  # type: ignore[return-value]
+        else:
+            @wraps(func)
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                last_exception: Exception | None = None
+                import time
 
-            if last_exception:
-                raise last_exception
-            raise RuntimeError("Retry logic error: no exception captured")
+                for attempt in range(config.max_attempts):
+                    try:
+                        return func(*args, **kwargs)
+                    except config.retry_on as e:
+                        last_exception = e
 
-        return wrapper  # type: ignore[return-value]
+                        if attempt == config.max_attempts - 1:
+                            logger.error(
+                                "Retry exhausted for %s after %d attempts: %s",
+                                func.__name__, config.max_attempts, e,
+                            )
+                            raise
+
+                        if isinstance(e, RateLimitError) and e.retry_after is not None:
+                            delay = e.retry_after
+                        else:
+                            delay = config.calculate_delay(attempt)
+
+                        logger.warning(
+                            "Retry %d/%d for %s: %s (delay: %.1fs)",
+                            attempt + 1, config.max_attempts, func.__name__, e, delay,
+                        )
+
+                        if on_retry:
+                            on_retry(attempt + 1, e, delay)
+
+                        time.sleep(delay)
+
+                if last_exception:
+                    raise last_exception
+                raise RuntimeError("Retry logic error: no exception captured")
+
+            return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -150,6 +195,40 @@ async def retry_async(
                 attempt + 1, config.max_attempts, e, delay,
             )
             await asyncio.sleep(delay)
+
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("Retry logic error")
+
+
+def retry_sync(
+    func: Callable[..., Any],
+    *args: Any,
+    config: RetryConfig | None = None,
+    **kwargs: Any,
+) -> Any:
+    """Retry a synchronous function call with the given config.
+
+    Alternative to the decorator for one-off retries:
+        result = retry_sync(api_call, query, config=RetryConfig(max_attempts=5))
+    """
+    config = config or RetryConfig()
+    import time
+
+    last_exception: Exception | None = None
+    for attempt in range(config.max_attempts):
+        try:
+            return func(*args, **kwargs)
+        except config.retry_on as e:
+            last_exception = e
+            if attempt == config.max_attempts - 1:
+                raise
+            delay = config.calculate_delay(attempt)
+            logger.warning(
+                "Retry %d/%d: %s (delay: %.1fs)",
+                attempt + 1, config.max_attempts, e, delay,
+            )
+            time.sleep(delay)
 
     if last_exception:
         raise last_exception

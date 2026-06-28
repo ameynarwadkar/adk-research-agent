@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import threading
 from enum import Enum
 from typing import Any, Callable
 
@@ -26,13 +27,19 @@ class CircuitState(str, Enum):
 
 
 class CircuitBreaker:
-    """Async circuit breaker for protecting external service calls.
+    """Async & Sync circuit breaker for protecting external service calls.
 
-    Usage:
+    Usage (Async):
         breaker = CircuitBreaker(name="pubmed", failure_threshold=5)
 
         async with breaker:
             result = await call_api()
+
+    Usage (Sync):
+        breaker = CircuitBreaker(name="pubmed", failure_threshold=5)
+
+        with breaker:
+            result = call_api()
     """
 
     def __init__(
@@ -52,6 +59,7 @@ class CircuitBreaker:
         self._last_failure_time: float = 0
         self._success_count = 0
         self._lock = asyncio.Lock()
+        self._sync_lock = threading.Lock()
 
     @property
     def state(self) -> CircuitState:
@@ -77,7 +85,30 @@ class CircuitBreaker:
             await self._on_failure()
         return False
 
+    def __enter__(self) -> CircuitBreaker:
+        self._before_call_sync()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> bool:
+        if exc_type is None:
+            self._on_success_sync()
+        elif exc_type and issubclass(exc_type, self.expected_exceptions):
+            self._on_failure_sync()
+        return False
+
     async def _before_call(self) -> None:
+        current_state = self.state
+        if current_state == CircuitState.OPEN:
+            raise CircuitBreakerOpen(self.name)
+        if current_state == CircuitState.HALF_OPEN:
+            logger.info("Circuit breaker '%s' HALF_OPEN — allowing test call", self.name)
+
+    def _before_call_sync(self) -> None:
         current_state = self.state
         if current_state == CircuitState.OPEN:
             raise CircuitBreakerOpen(self.name)
@@ -92,8 +123,30 @@ class CircuitBreaker:
             self._failure_count = 0
             self._success_count += 1
 
+    def _on_success_sync(self) -> None:
+        with self._sync_lock:
+            if self._state in (CircuitState.HALF_OPEN, CircuitState.OPEN):
+                logger.info("Circuit breaker '%s' recovered → CLOSED", self.name)
+            self._state = CircuitState.CLOSED
+            self._failure_count = 0
+            self._success_count += 1
+
     async def _on_failure(self) -> None:
         async with self._lock:
+            self._failure_count += 1
+            self._last_failure_time = time.time()
+            if self._state == CircuitState.HALF_OPEN:
+                self._state = CircuitState.OPEN
+                logger.warning("Circuit breaker '%s' test failed → OPEN", self.name)
+            elif self._failure_count >= self.failure_threshold:
+                self._state = CircuitState.OPEN
+                logger.warning(
+                    "Circuit breaker '%s' tripped OPEN after %d failures",
+                    self.name, self._failure_count,
+                )
+
+    def _on_failure_sync(self) -> None:
+        with self._sync_lock:
             self._failure_count += 1
             self._last_failure_time = time.time()
             if self._state == CircuitState.HALF_OPEN:

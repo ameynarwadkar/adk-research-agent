@@ -1,12 +1,3 @@
-"""OpenAlex search tool — searches the OpenAlex open scholarly index.
-
-OpenAlex indexes 250M+ scholarly works across all disciplines.
-No API key required; add OPENALEX_EMAIL to .env for polite-pool
-access (higher rate limits).
-"""
-
-from __future__ import annotations
-
 import logging
 import os
 from typing import Any
@@ -14,6 +5,10 @@ from typing import Any
 import httpx
 
 from research_agent.models.paper import Author, Paper
+from research_agent.retrylogic import retry
+from research_agent.retrylogic.exceptions import RateLimitError, ExternalAPIError
+from research_agent.retrylogic.breakers import openalex_breaker
+from research_agent.tools.cache import get_cached_response, set_cached_response
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +95,87 @@ def _parse_work(work: dict[str, Any]) -> Paper | None:
         return None
 
 
+@retry(
+    max_attempts=3,
+    base_delay=1.0,
+    max_delay=10.0,
+    retry_on=(RateLimitError, ExternalAPIError),
+)
+def _search_openalex_api(
+    query: str,
+    max_results: int = 20,
+    from_year: int | None = None,
+    to_year: int | None = None,
+) -> dict:
+    max_results = min(max_results, 50)
+    logger.info("Executing live OpenAlex API search. Query: '%s' | Limit: %d", query, max_results)
+
+    params: dict[str, Any] = {
+        "search": query,
+        "per-page": max_results,
+        "sort": "relevance_score:desc",
+        "select": _FIELDS,
+    }
+
+    # Year filter — OpenAlex uses filter param
+    year_filters: list[str] = []
+    if from_year:
+        year_filters.append(f"publication_year:>{from_year - 1}")
+    if to_year:
+        year_filters.append(f"publication_year:<{to_year + 1}")
+    if year_filters:
+        params["filter"] = ",".join(year_filters)
+        logger.info("Adding year filters to OpenAlex request: %s", params["filter"])
+
+    # Polite pool: add email if configured
+    email = os.getenv("OPENALEX_EMAIL")
+    if email:
+        params["mailto"] = email
+        logger.info("Using polite pool mailto: %s", email)
+
+    headers = {
+        "User-Agent": "ADK-ResearchAgent/0.1.0 (mailto:amey@example.com)",
+    }
+
+    with openalex_breaker:
+        with httpx.Client(timeout=30.0) as client:
+            logger.info("Sending GET request to OpenAlex endpoint: %s with params %s", _BASE_URL, params)
+            try:
+                resp = client.get(_BASE_URL, params=params, headers=headers)
+            except httpx.RequestError as exc:
+                logger.error("OpenAlex GET request failed: %s", exc)
+                raise ExternalAPIError(f"OpenAlex network error: {exc}", service_name="OpenAlex")
+
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", "5"))
+                logger.warning("OpenAlex hit 429 rate limit. Retry-After: %d", retry_after)
+                raise RateLimitError("OpenAlex API rate limited", service_name="OpenAlex", retry_after=retry_after)
+            elif resp.status_code >= 400:
+                logger.error("OpenAlex failed with status code %d", resp.status_code)
+                raise ExternalAPIError(
+                    f"OpenAlex API failed with status {resp.status_code}",
+                    status_code=resp.status_code,
+                    service_name="OpenAlex",
+                )
+
+            data = resp.json()
+
+        results = data.get("results", [])
+        logger.info("Received %d raw works from OpenAlex.", len(results))
+        papers = [p for r in results if (p := _parse_work(r)) is not None]
+        total = data.get("meta", {}).get("count", len(papers))
+
+        logger.info("OpenAlex parsed results: successfully mapped %d out of %d works (total hits=%d)", len(papers), len(results), total)
+
+        return {
+            "papers": [p.model_dump() for p in papers],
+            "query": query,
+            "total_results": total,
+            "source": "openalex",
+        }
+
+
+@observe()
 def search_openalex(
     query: str,
     max_results: int = 20,
@@ -120,64 +196,26 @@ def search_openalex(
     Returns:
         Dictionary with 'papers' list, 'query', 'total_results', and 'source' fields.
     """
-    max_results = min(max_results, 50)
-    logger.info("OpenAlex search: '%s' (limit=%d)", query, max_results)
+    logger.info("search_openalex tool entry. Query: '%s' | Limit: %d | Years: %s-%s", query, max_results, from_year, to_year)
 
-    params: dict[str, Any] = {
-        "search": query,
-        "per-page": max_results,
-        "sort": "relevance_score:desc",
-        "select": _FIELDS,
-    }
+    # Use local cache to prevent redundant API calls
+    cache_key = f"query:{query}|limit:{max_results}|from:{from_year}|to:{to_year}"
+    cached = get_cached_response("openalex", cache_key)
+    if cached:
+        logger.info("OpenAlex search cache hit for key: %s", cache_key[:40])
+        return cached
 
-    # Year filter — OpenAlex uses filter param
-    year_filters: list[str] = []
-    if from_year:
-        year_filters.append(f"publication_year:>{from_year - 1}")
-    if to_year:
-        year_filters.append(f"publication_year:<{to_year + 1}")
-    if year_filters:
-        params["filter"] = ",".join(year_filters)
-
-    # Polite pool: add email if configured
-    email = os.getenv("OPENALEX_EMAIL")
-    if email:
-        params["mailto"] = email
-
+    logger.info("OpenAlex cache miss. Triggering live search.")
     try:
-        with httpx.Client(timeout=30.0) as client:
-            resp = client.get(_BASE_URL, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-
-        results = data.get("results", [])
-        papers = [p for r in results if (p := _parse_work(r)) is not None]
-        total = data.get("meta", {}).get("count", len(papers))
-
-        logger.info("OpenAlex search '%s': found %d papers (total=%d)", query, len(papers), total)
-
-        return {
-            "papers": [p.model_dump() for p in papers],
-            "query": query,
-            "total_results": total,
-            "source": "openalex",
-        }
-
-    except httpx.HTTPError as exc:
-        logger.warning("OpenAlex API unavailable: %s", exc)
+        res = _search_openalex_api(query, max_results, from_year, to_year)
+        set_cached_response("openalex", cache_key, res)
+        return res
+    except Exception as e:
+        logger.warning("OpenAlex search failed: %s", e)
         return {
             "papers": [],
             "query": query,
             "total_results": 0,
             "source": "openalex",
-            "error": f"OpenAlex API unavailable: {exc}",
-        }
-    except Exception as exc:
-        logger.warning("OpenAlex search failed: %s", exc)
-        return {
-            "papers": [],
-            "query": query,
-            "total_results": 0,
-            "source": "openalex",
-            "error": f"OpenAlex search failed: {exc}",
+            "error": f"OpenAlex search failed: {e}",
         }

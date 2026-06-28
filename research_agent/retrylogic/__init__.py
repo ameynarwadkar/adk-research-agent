@@ -5,7 +5,7 @@ from research_agent.retrylogic.exceptions import (
     RateLimitError,
     CircuitBreakerOpen,
 )
-from research_agent.retrylogic.retry import RetryConfig, retry, retry_async
+from research_agent.retrylogic.retry import RetryConfig, retry, retry_async, retry_sync
 from research_agent.retrylogic.circuit_breaker import CircuitBreaker, CircuitState
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     "RetryConfig",
     "retry",
     "retry_async",
+    "retry_sync",
     # Circuit breaker
     "CircuitBreaker",
     "CircuitState",

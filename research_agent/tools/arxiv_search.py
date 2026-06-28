@@ -6,6 +6,8 @@ This is a plain function that ADK wraps as a FunctionTool automatically.
 
 from __future__ import annotations
 
+from langfuse.decorators import observe
+
 import logging
 
 import arxiv
@@ -32,6 +34,7 @@ def _to_paper(result: arxiv.Result) -> Paper:
     )
 
 
+@observe()
 def search_arxiv(query: str, max_results: int = 20) -> dict:
     """Search ArXiv for academic papers matching the query.
 

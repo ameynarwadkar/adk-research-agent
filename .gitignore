@@ -54,3 +54,9 @@ desktop.ini
 # ── Logs ─────────────────────────────────────────────────────────────────
 *.log
 logs/
+outputs/
+.agents
+updates.md
+.cache/
+research_agent/.cache/
+frontend/.vite/

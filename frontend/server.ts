@@ -207,20 +207,6 @@ Keep the tone highly analytical, objective, and dense with genuine academic insi
       emitEvent("agent_end", { agent: "synthesizer" });
       await delay(400);
 
-      // VALIDATOR
-      emitEvent("agent_start", { agent: "validator" });
-      await delay(800);
-      emitEvent("agent_output", { agent: "validator", text: "Extracting bibliography registries for citation validation...\n" });
-      await delay(500);
-      emitEvent("tool_call", { agent: "validator", tool: "validate_citations", args: { target_citations: 3 } });
-      await delay(1000);
-      emitEvent("agent_output", { agent: "validator", text: "Successfully cross-referenced PMIDs against PubMed National Library database registries.\n" });
-      await delay(400);
-      emitEvent("agent_output", { agent: "validator", text: "Citation Integrity Check: 100% of inline PMIDs correspond to actual study registry metrics.\n" });
-      await delay(600);
-      emitEvent("agent_end", { agent: "validator" });
-      await delay(400);
-
       // FORMATTER
       emitEvent("agent_start", { agent: "formatter" });
       await delay(800);

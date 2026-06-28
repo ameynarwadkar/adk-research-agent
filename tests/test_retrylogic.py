@@ -12,7 +12,7 @@ from research_agent.retrylogic.exceptions import (
     RateLimitError,
     ResearchAgentError,
 )
-from research_agent.retrylogic.retry import RetryConfig, retry, retry_async
+from research_agent.retrylogic.retry import RetryConfig, retry, retry_async, retry_sync
 from research_agent.retrylogic.circuit_breaker import CircuitBreaker, CircuitState
 
 
@@ -265,3 +265,69 @@ class TestCircuitBreaker:
         breaker.reset()
         assert breaker.state == CircuitState.CLOSED
         assert breaker._failure_count == 0
+
+    def test_sync_circuit_breaker_flow(self):
+        breaker = CircuitBreaker(
+            name="test-sync",
+            failure_threshold=2,
+            expected_exceptions=(ExternalAPIError,),
+        )
+        assert breaker.state == CircuitState.CLOSED
+
+        # Success call
+        with breaker:
+            pass
+        assert breaker.state == CircuitState.CLOSED
+
+        # Failures to trip open
+        for _ in range(2):
+            try:
+                with breaker:
+                    raise ExternalAPIError("fail")
+            except ExternalAPIError:
+                pass
+        assert breaker.state == CircuitState.OPEN
+
+        # Open circuit raises immediately
+        with pytest.raises(CircuitBreakerOpen):
+            with breaker:
+                pass
+
+
+class TestRetrySync:
+    def test_sync_decorator_success(self):
+        call_count = 0
+
+        @retry(max_attempts=3, retry_on=(ExternalAPIError,))
+        def flaky_func():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise ExternalAPIError("transient")
+            return "ok"
+
+        assert flaky_func() == "ok"
+        assert call_count == 2
+
+    def test_sync_decorator_raises(self):
+        @retry(max_attempts=2, retry_on=(ExternalAPIError,), base_delay=0)
+        def always_fails():
+            raise ExternalAPIError("permanent")
+
+        with pytest.raises(ExternalAPIError):
+            always_fails()
+
+    def test_retry_sync_helper(self):
+        call_count = 0
+
+        def fn(x):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise ExternalAPIError("transient")
+            return x * 2
+
+        cfg = RetryConfig(max_attempts=3, base_delay=0, retry_on=(ExternalAPIError,))
+        result = retry_sync(fn, 21, config=cfg)
+        assert result == 42
+        assert call_count == 2

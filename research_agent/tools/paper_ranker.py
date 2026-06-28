@@ -5,6 +5,7 @@ from research_agent.models.paper import Paper
 
 logger = logging.getLogger(__name__)
 
+@observe()
 def rank_papers(
     papers: list[dict],
     sort_by: str = "citations",
@@ -25,9 +26,11 @@ def rank_papers(
         Dictionary with ranked 'papers' list, 'count', and 'sorted_by'.
     """
     if not papers:
+        logger.info("Rank papers called with empty list.")
         return {"papers": [], "count": 0, "sorted_by": sort_by}
 
     parsed = [Paper.model_validate(p) for p in papers]
+    logger.info("Ranking %d papers by attribute '%s' (ascending=%s, top_n=%s)", len(parsed), sort_by, ascending, top_n)
 
     sort_key_map = {
         "citations": lambda p: p.citation_count,
@@ -39,9 +42,11 @@ def rank_papers(
     parsed.sort(key=key_func, reverse=not ascending)
 
     if top_n is not None:
+        before = len(parsed)
         parsed = parsed[:top_n]
+        logger.info("Capped ranked list to top_n=%d (was %d)", top_n, before)
 
-    logger.info("Ranked %d papers by %s (top_n=%s)", len(parsed), sort_by, top_n)
+    logger.info("Successfully ranked papers. Top paper ID: %s, Title: %s", parsed[0].paper_id if parsed else "None", parsed[0].title if parsed else "None")
 
     return {
         "papers": [p.model_dump() for p in parsed],

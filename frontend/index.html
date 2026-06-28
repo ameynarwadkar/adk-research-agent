@@ -1,59 +1,38 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ResearchAgent — Autonomous Literature Reviews</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <!-- Typography preconnect -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- Plus Jakarta Sans / Outfit for displays, JetBrains Mono for telemetry metrics -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet" />
-</head>
-
-<body>
-  <!-- System-wide SVG Filters for neon pipeline glows and smooth bezier path shadows -->
-  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" width="0" height="0">
-    <defs>
-      <filter id="glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="8" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-      <filter id="glow-teal" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="6" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-  </svg>
-
-  <div id="app" class="app-layout">
-
-    <!-- Left Sidebar Panel: Machined Glass Panel -->
-    <aside class="sidebar" id="sidebar-panel">
-      <div class="sidebar-header">
-        <div class="brand">
-          <div class="brand-icon-wrapper">
-            <!-- Animated SVG Vector Logo -->
-            <svg class="brand-icon" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="4" stroke-opacity="0.1" />
-              <circle cx="50" cy="30" r="8" fill="var(--accent-cyan)" />
-              <circle cx="30" cy="65" r="7" fill="currentColor" />
-              <circle cx="70" cy="65" r="7" fill="var(--accent-teal)" />
-              <path d="M50 30 L30 65 M50 30 L70 65" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <path d="M30 65 L70 65" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4,4" stroke-opacity="0.5" />
-            </svg>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Research Agent - Multi-Agent Literature Review Assistant</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app" class="app-layout">
+      
+      <!-- Side Navigation Bar -->
+      <aside class="sidebar" id="sidebar-panel">
+        <div class="sidebar-header">
+          <div class="brand">
+            <div class="brand-icon-wrapper">
+              <svg class="brand-icon" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="4" stroke-opacity="0.15"/>
+                <circle cx="50" cy="30" r="7" fill="currentColor"/>
+                <circle cx="30" cy="65" r="6" fill="currentColor"/>
+                <circle cx="70" cy="65" r="6" fill="var(--accent-violet)"/>
+                <line x1="50" y1="30" x2="30" y2="65" stroke="currentColor" stroke-width="2" stroke-opacity="0.8"/>
+                <line x1="50" y1="30" x2="70" y2="65" stroke="currentColor" stroke-width="2" stroke-opacity="0.8"/>
+                <line x1="30" y1="65" x2="70" y2="65" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,3" stroke-opacity="0.4"/>
+              </svg>
+            </div>
+            <span class="brand-name">ResearchAgent</span>
           </div>
-          <span class="brand-name">ResearchAgent</span>
         </div>
-      </div>
 
-      <!-- Action Button inside Outer Bezel Enclosure -->
-      <div class="sidebar-action">
-        <div class="nested-bezel-button">
+        <div class="sidebar-action">
           <button id="btn-new-research" class="btn-create">
             <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -61,373 +40,300 @@
             <span>New Research</span>
           </button>
         </div>
-      </div>
 
-      <!-- Dynamic History Sidebar Panel -->
-      <div class="sidebar-history">
-        <h3 class="history-title">Research History</h3>
-        <ul class="history-list" id="history-container">
-          <!-- Dynamic history sessions populated from localStorage -->
-          <li class="history-empty">No past research sessions</li>
-        </ul>
-      </div>
-
-      <!-- Sidebar Status Telemetry -->
-      <div class="sidebar-footer">
-        <div class="badge-framework">
-          <span class="badge-dot"></span>
-          <span>ADK Engine</span>
+        <div class="sidebar-history">
+          <h3 class="history-title">RESEARCH HISTORY</h3>
+          <ul class="history-list" id="history-container">
+            <!-- Dynamic history sessions populated from localStorage -->
+            <li class="history-empty">No past research sessions</li>
+          </ul>
         </div>
-        <span class="version-label">v1.0.0</span>
-      </div>
-    </aside>
 
-    <!-- Main Content Workspace Frame -->
-    <main class="content-frame" id="main-content">
+        <div class="sidebar-footer">
+          <div class="badge-framework">
+            <span class="badge-dot"></span>
+            <span>ADK Pipeline</span>
+          </div>
+          <span class="version-label">v0.1.0</span>
+        </div>
+      </aside>
 
-      <!-- View 1: Hero view (Initial State) -->
-      <section id="view-hero" class="view-panel active">
-        <div class="hero-container">
-          <header class="hero-header">
-            <!-- Eyebrow Tag -->
-            <span class="eyebrow-badge">Autonomous Synthesis</span>
-            <h1 class="gradient-title">Agentic Literature Reviews</h1>
-            <p class="hero-subtitle">
-              Deploy a pipeline of 8 cooperative ADK agents to query, extract, reason, and validate clinical and technical literature.
-            </p>
-          </header>
+      <!-- Main Central Content Frame -->
+      <main class="content-frame" id="main-content">
+        
+        <!-- View 1: Hero (Initial State View) -->
+        <section id="view-hero" class="view-panel active">
+          <div class="hero-container">
+            <header class="hero-header">
+              <h1 class="gradient-title animate-title">Research Agent</h1>
+              <p class="hero-subtitle">
+                Deploy a sequential pipeline of 7 specialized ADK agents to engineer a comprehensive, fully annotated literature review from a single question.
+              </p>
+            </header>
 
-          <!-- Input console wrapped in Double-Bezel nested architecture -->
-          <div class="outer-bezel-enclosure card-glow input-card-bezel">
-            <div class="inner-core-container input-card">
+            <div class="input-card card-glow">
               <div class="input-card-header">
-                <span class="input-label">Research Inquiry</span>
+                <span class="input-label">RESEARCH INQUIRY</span>
                 <span class="keyboard-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to execute</span>
               </div>
               <div class="textarea-wrapper">
-                <textarea id="research-query-input"
-                  placeholder="Enter a clinical or scientific inquiry (e.g., 'What are the therapeutic mechanics of CRISPR-Cas9 base editors in somatic therapies for sickle cell disease?')"></textarea>
+                <textarea 
+                  id="research-query-input" 
+                  placeholder="Enter your target research question (e.g. 'What are the therapeutic mechanics of CRISPR-Cas9 base editors in somatic therapies for sickle cell disease?')"
+                ></textarea>
               </div>
               <div class="input-card-footer">
                 <button id="btn-start-research" class="btn-submit">
-                  <span>Execute Pipeline</span>
-                  <div class="btn-icon-circle">
-                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7-7 7M5 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                  <span>Start Research Pipeline</span>
+                  <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
             </div>
-          </div>
 
-          <!-- Bento Grid 2.0 (Asymmetric Visual Hierarchy) -->
-          <div class="features-bento-grid">
-            <!-- Bento Card 1: Large Asymmetric -->
-            <div class="outer-bezel-enclosure bento-col-2">
-              <div class="inner-core-container bento-card">
+            <div class="features-grid">
+              <div class="feature-card">
                 <div class="feature-header">
-                  <div class="feature-icon cyan">
-                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <div class="feature-icon blue">
+                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
-                  <h4 class="feature-title">Multi-Database Ingestion</h4>
+                  <h4 class="feature-title">Multi-Source Search</h4>
                 </div>
-                <p class="feature-desc">
-                  Simultaneously queries PubMed, arXiv, and OpenAlex. Leverages recursive citation graph traversal to map referenced studies automatically.
-                </p>
+                <p class="feature-desc">Simultaneously crawls PubMed, arXiv, and OpenAlex. Leverages structured indexing and graph traversal logic to spider citations.</p>
               </div>
-            </div>
 
-            <!-- Bento Card 2: Small -->
-            <div class="outer-bezel-enclosure">
-              <div class="inner-core-container bento-card">
+              <div class="feature-card">
                 <div class="feature-header">
-                  <div class="feature-icon teal">
-                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <div class="feature-icon purple">
+                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                   </div>
-                  <h4 class="feature-title">PMID Cross-Validation</h4>
+                  <h4 class="feature-title">Evidence Quality</h4>
                 </div>
-                <p class="feature-desc">
-                  An active validator agent cross-checks every generated PMID against PubMed servers, eradicating hallucinations.
-                </p>
+                <p class="feature-desc">Automatically inspects methodologies, assesses study duration, highlights evidence conflict matrices, and indexes PMIDs.</p>
               </div>
-            </div>
 
-            <!-- Bento Card 3: Small -->
-            <div class="outer-bezel-enclosure">
-              <div class="inner-core-container bento-card">
+              <div class="feature-card">
                 <div class="feature-header">
-                  <div class="feature-icon amber">
-                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  <div class="feature-icon emerald">
+                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 class="feature-title">Structured Output</h4>
+                  <h4 class="feature-title">Formatted Report</h4>
                 </div>
-                <p class="feature-desc">
-                  Produces publication-ready Markdown featuring synthesized discussions, evidence matrices, and real citation indices.
-                </p>
-              </div>
-            </div>
-
-            <!-- Bento Card 4: Medium Asymmetric -->
-            <div class="outer-bezel-enclosure bento-col-2">
-              <div class="inner-core-container bento-card">
-                <div class="feature-header">
-                  <div class="feature-icon green">
-                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
-                    </svg>
-                  </div>
-                  <h4 class="feature-title">Interactive Telemetry Graph</h4>
-                </div>
-                <p class="feature-desc">
-                  Watch the multi-agent graph stream in real time. Hover over active nodes to inspect live log streams and invoked tools.
-                </p>
+                <p class="feature-desc">Compiles evidence into a structured literature review containing a comprehensive executive summary, discussion, and bibliography.</p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- View 2: Pipeline Visualizer (DAG & Console) -->
-      <section id="view-pipeline" class="view-panel">
-        <div class="pipeline-container">
-          <header class="pipeline-topline">
-            <div class="active-query-meta">
-              <span class="meta-badge" id="pipeline-status-badge">ACTIVE RUN</span>
-              <p class="active-query-text" id="pipeline-query-display"></p>
-            </div>
-            <div class="pipeline-header-actions">
-              <button id="btn-view-report" class="btn-secondary" style="display:none;">
-                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>View Report</span>
-              </button>
+        <!-- View 2: Pipeline Visualizer (Running Panel View) -->
+        <section id="view-pipeline" class="view-panel">
+          <div class="pipeline-container">
+            <header class="pipeline-topline">
+              <div class="active-query-meta">
+                <span class="meta-badge">ACTIVE RUN</span>
+                <p class="active-query-text" id="pipeline-query-display"></p>
+              </div>
               <button id="btn-cancel-pipeline" class="btn-cancel">
                 <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 <span>Halt Execution</span>
               </button>
-            </div>
-          </header>
+            </header>
 
-          <!-- THE LIVE DAG SVG PANEL -->
-          <div class="dag-wrapper">
-            <div class="dag-container" id="dag-graph-view">
-              <!-- SVG edges overlay layer -->
-              <svg class="dag-edges-overlay" id="dag-svg-canvas"></svg>
+            <!-- THE LIVE DAG GRAPH -->
+            <div class="dag-wrapper">
+              <div class="dag-container" id="dag-graph-view">
+                <!-- SVG edges overlay layer -->
+                <svg class="dag-edges-overlay" id="dag-svg-canvas"></svg>
 
-              <!-- Root pipeline node -->
-              <div class="dag-node root-node" id="node-root" style="grid-area: root;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <span class="node-meta">PIPELINE SEQUENCE</span>
-                  <span class="node-title">research_pipeline</span>
+                <!-- Root pipeline node -->
+                <div class="dag-node root-node" id="node-root" style="grid-area: root;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <span class="node-meta">PIPELINE SEQUENCE</span>
+                    <span class="node-title">research_pipeline</span>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Agent Row Level -->
-              <div class="dag-node agent-node" id="node-clarifier" style="grid-area: clarifier;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">clarifier</span>
-                  <span class="node-subtitle">refined_query</span>
+                <!-- Agent Row Level -->
+                <div class="dag-node agent-node" id="node-clarifier" style="grid-area: clarifier;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">clarifier</span>
+                    <span class="node-subtitle">refined_query</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-planner" style="grid-area: planner;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">planner</span>
-                  <span class="node-subtitle">search_guidance</span>
+                <div class="dag-node agent-node" id="node-planner" style="grid-area: planner;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">planner</span>
+                    <span class="node-subtitle">search_guidance</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-searcher" style="grid-area: searcher;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">searcher</span>
-                  <span class="node-subtitle">search_results</span>
+                <div class="dag-node agent-node" id="node-searcher" style="grid-area: searcher;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">searcher</span>
+                    <span class="node-subtitle">search_results</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-analyzer" style="grid-area: analyzer;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">analyzer</span>
-                  <span class="node-subtitle">analysis_results</span>
+                <div class="dag-node agent-node" id="node-analyzer" style="grid-area: analyzer;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">analyzer</span>
+                    <span class="node-subtitle">analysis_results</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-reasoner" style="grid-area: reasoner;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">reasoner</span>
-                  <span class="node-subtitle">reasoning_output</span>
+                <div class="dag-node agent-node" id="node-reasoner" style="grid-area: reasoner;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">reasoner</span>
+                    <span class="node-subtitle">reasoning_output</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-synthesizer" style="grid-area: synthesizer;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">synthesizer</span>
-                  <span class="node-subtitle">final_review</span>
+                <div class="dag-node agent-node" id="node-synthesizer" style="grid-area: synthesizer;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">synthesizer</span>
+                    <span class="node-subtitle">final_review</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-validator" style="grid-area: validator;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">validator</span>
-                  <span class="node-subtitle">validated_review</span>
+                <div class="dag-node agent-node" id="node-formatter" style="grid-area: formatter;">
+                  <div class="node-glow"></div>
+                  <div class="node-inner">
+                    <div class="node-status-icon"></div>
+                    <span class="node-title">formatter</span>
+                    <span class="node-subtitle">formatted_report</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="dag-node agent-node" id="node-formatter" style="grid-area: formatter;">
-                <div class="node-glow"></div>
-                <div class="node-inner">
-                  <div class="node-status-icon"></div>
-                  <span class="node-title">formatter</span>
-                  <span class="node-subtitle">formatted_report</span>
+                <!-- Tools Levels under searcher & analyzer -->
+                <!-- Searcher Tools -->
+                <div class="dag-node tool-node" id="node-tool-search_arxiv" style="grid-area: search_arxiv;">
+                  <span class="tool-title">search_arxiv</span>
                 </div>
-              </div>
-
-              <!-- Tools Levels under searcher & analyzer -->
-              <div class="dag-node tool-node" id="node-tool-search_arxiv" style="grid-area: search_arxiv;">
-                <span class="tool-title">search_arxiv</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-search_pubmed" style="grid-area: search_pubmed;">
-                <span class="tool-title">search_pubmed</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-search_openalex" style="grid-area: search_openalex;">
-                <span class="tool-title">search_openalex</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-filter_papers_s" style="grid-area: filter_papers_s;">
-                <span class="tool-title">filter_papers</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-rank_papers" style="grid-area: rank_papers;">
-                <span class="tool-title">rank_papers</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-extract_abstracts_s" style="grid-area: extract_abstracts_s;">
-                <span class="tool-title">extract_abstracts</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-traverse_citations" style="grid-area: traverse_citations;">
-                <span class="tool-title">traverse_citations</span>
-              </div>
-
-              <!-- Analyzer Tools -->
-              <div class="dag-node tool-node" id="node-tool-filter_papers_a" style="grid-area: filter_papers_a;">
-                <span class="tool-title">filter_papers</span>
-              </div>
-              <div class="dag-node tool-node" id="node-tool-extract_abstracts_a" style="grid-area: extract_abstracts_a;">
-                <span class="tool-title">extract_abstracts</span>
-              </div>
-
-              <!-- Validator Tool -->
-              <div class="dag-node tool-node" id="node-tool-validate_citations" style="grid-area: validate_citations;">
-                <span class="tool-title">validate_citations</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Lower Activity Dashboard Console -->
-          <div class="agent-activity-panel">
-            <div class="activity-header">
-              <div class="tracker-info">
-                <div class="active-pulse-beacon">
-                  <span class="beacon-ring"></span>
-                  <span class="beacon-dot"></span>
+                <div class="dag-node tool-node" id="node-tool-search_pubmed" style="grid-area: search_pubmed;">
+                  <span class="tool-title">search_pubmed</span>
                 </div>
-                <span class="activity-label">Active Agent</span>
-                <span class="active-agent-name" id="active-agent-display">clarifier</span>
-              </div>
-              <div class="timing-tracker">
-                <span class="timing-label">Elapsed Time</span>
-                <span class="timing-counter" id="pipeline-timer">00:00</span>
+                <div class="dag-node tool-node" id="node-tool-search_openalex" style="grid-area: search_openalex;">
+                  <span class="tool-title">search_openalex</span>
+                </div>
+                <div class="dag-node tool-node" id="node-tool-filter_papers_s" style="grid-area: filter_papers_s;">
+                  <span class="tool-title">filter_papers</span>
+                </div>
+                <div class="dag-node tool-node" id="node-tool-rank_papers" style="grid-area: rank_papers;">
+                  <span class="tool-title">rank_papers</span>
+                </div>
+                <div class="dag-node tool-node" id="node-tool-extract_abstracts_s" style="grid-area: extract_abstracts_s;">
+                  <span class="tool-title">extract_abstracts</span>
+                </div>
+                <div class="dag-node tool-node" id="node-tool-traverse_citations" style="grid-area: traverse_citations;">
+                  <span class="tool-title">traverse_citations</span>
+                </div>
+
+                <!-- Analyzer Tools -->
+                <div class="dag-node tool-node" id="node-tool-filter_papers_a" style="grid-area: filter_papers_a;">
+                  <span class="tool-title">filter_papers</span>
+                </div>
+                <div class="dag-node tool-node" id="node-tool-extract_abstracts_a" style="grid-area: extract_abstracts_a;">
+                  <span class="tool-title">extract_abstracts</span>
+                </div>
               </div>
             </div>
 
-            <!-- Double-Bezel Console Wrapper -->
-            <div class="outer-bezel-enclosure console-bezel">
-              <div class="inner-core-container console-box">
+            <!-- Lower Action Monitor Console -->
+            <div class="agent-activity-panel">
+              <div class="activity-header">
+                <div class="tracker-info">
+                  <div class="active-pulse-beacon">
+                    <span class="beacon-ring"></span>
+                    <span class="beacon-dot"></span>
+                  </div>
+                  <span class="activity-label">Active Agent:</span>
+                  <span class="active-agent-name" id="active-agent-display">clarifier</span>
+                </div>
+                <div class="timing-tracker">
+                  <span class="timing-label">ELAPSED TIME:</span>
+                  <span class="timing-counter" id="pipeline-timer">00:00</span>
+                </div>
+              </div>
+
+              <!-- Stream console -->
+              <div class="console-box">
                 <div class="console-stream-wrapper" id="console-stream">
                   <div class="system-log-line">Initializing SequentialAgent "research_pipeline"...</div>
                   <div class="system-log-line text-indigo-400">Stream established. Waiting for agent output...</div>
                 </div>
                 <!-- Mini tool badge list -->
                 <div class="tool-pills-shelf" id="active-tools-shelf">
-                  <span class="shelf-label">Invoked Tools</span>
+                  <span class="shelf-label">Invoked Tools:</span>
                   <div class="pills-container" id="tool-pills-list">
                     <!-- Dynamic badges slide in -->
-                    <span class="empty-shelf">None invoked yet</span>
+                    <span class="empty-shelf shadow-none text-xs text-gray-500">None invoked yet</span>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
+        </section>
 
-        </div>
-      </section>
+        <!-- View 3: Review Report (Completed State View) -->
+        <section id="view-report" class="view-panel">
+          <div class="report-view-container">
+            <header class="report-toolbar">
+              <div class="report-meta">
+                <span class="report-badge">COMPLETED REVIEW</span>
+                <h2 class="report-meta-timestamp" id="report-date-display">June 20, 2026</h2>
+              </div>
+              <div class="report-actions">
+                <button id="btn-copy-report" class="btn-secondary">
+                  <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                  <span id="btn-copy-text">Copy Markdown</span>
+                </button>
+                <button id="btn-restart-from-report" class="btn-create">
+                  <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 3v5h-5" />
+                  </svg>
+                  <span>New Literature Review</span>
+                </button>
+              </div>
+            </header>
 
-      <!-- View 3: Completed Report view -->
-      <section id="view-report" class="view-panel">
-        <div class="report-view-container">
-          <header class="report-toolbar">
-            <div class="report-meta">
-              <span class="report-badge">COMPLETED REVIEW</span>
-              <h2 class="report-meta-timestamp" id="report-date-display">June 20, 2026</h2>
-            </div>
-            <div class="report-actions">
-              <button id="btn-view-pipeline" class="btn-secondary">
-                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span>View Pipeline</span>
-              </button>
-              <button id="btn-copy-report" class="btn-secondary">
-                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                <span id="btn-copy-text">Copy Markdown</span>
-              </button>
-              <button id="btn-restart-from-report" class="btn-create">
-                <svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 3v5h-5" />
-                </svg>
-                <span>New Literature Review</span>
-              </button>
-            </div>
-          </header>
-
-          <!-- Markdown Output Body Container wrapped in Double-Bezel Enclosure -->
-          <div class="outer-bezel-enclosure report-bezel">
-            <article class="inner-core-container markdown-body" id="report-body-container">
+            <!-- Markdown Output Body Container -->
+            <article class="markdown-body card-glow" id="report-body-container">
               <!-- Dynamically rendered markdown goes here -->
             </article>
           </div>
-        </div>
-      </section>
+        </section>
 
-    </main>
+      </main>
 
-    <!-- Toast Feedback Elements -->
-    <div id="toast-wrapper" class="toast-wrapper"></div>
-  </div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
-
+      <!-- Toast Feedback Elements -->
+      <div id="toast-wrapper" class="toast-wrapper"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

@@ -1,4 +1,4 @@
-import "./style.css";
+import "./index.css";
 import { marked } from "marked";
 
 // Types
@@ -19,13 +19,6 @@ let eventSource: EventSource | null = null;
 let timerInterval: any = null;
 let timerSeconds = 0;
 let sessions: ResearchSession[] = [];
-let simulatedTimeouts: any[] = [];
-
-function clearSimulatedTimeouts() {
-  simulatedTimeouts.forEach(t => clearTimeout(t));
-  simulatedTimeouts = [];
-}
-
 
 // DOM Elements cache
 const els = {
@@ -36,9 +29,6 @@ const els = {
   btnStartResearch: document.getElementById("btn-start-research") as HTMLButtonElement,
   btnNewResearch: document.getElementById("btn-new-research") as HTMLButtonElement,
   btnCancelPipeline: document.getElementById("btn-cancel-pipeline") as HTMLButtonElement,
-  btnViewPipeline: document.getElementById("btn-view-pipeline") as HTMLButtonElement,
-  btnViewReport: document.getElementById("btn-view-report") as HTMLButtonElement,
-  pipelineStatusBadge: document.getElementById("pipeline-status-badge") as HTMLElement,
   btnCopyReport: document.getElementById("btn-copy-report") as HTMLButtonElement,
   btnCopyText: document.getElementById("btn-copy-text") as HTMLElement,
   btnRestartFromReport: document.getElementById("btn-restart-from-report") as HTMLButtonElement,
@@ -63,7 +53,6 @@ const AGENT_ORDER = [
   "analyzer",
   "reasoner",
   "synthesizer",
-  "validator",
   "formatter"
 ];
 
@@ -123,19 +112,6 @@ function setupEventListeners() {
     cancelActivePipeline();
   });
 
-  // View Pipeline from Report (toggle back to DAG)
-  els.btnViewPipeline.addEventListener("click", () => {
-    switchToView("pipeline");
-  });
-
-  // View Report from Pipeline (after completion)
-  els.btnViewReport.addEventListener("click", () => {
-    const currentSession = sessions.find(s => s.id === activeSessionId);
-    if (currentSession && currentSession.status === "completed") {
-      displayMarkdownReport(currentSession);
-    }
-  });
-
   // Copy Markdown Clipboard action
   els.btnCopyReport.addEventListener("click", () => {
     copyMarkdownToClipboard();
@@ -159,15 +135,9 @@ function switchToView(view: "hero" | "pipeline" | "report") {
     els.queryInput.focus();
   } else if (view === "pipeline") {
     els.viewPipeline.classList.add("active");
-    // If navigating back to a completed pipeline, restore completed visual state
-    const currentSession = sessions.find(s => s.id === activeSessionId);
-    if (currentSession?.status === "completed") {
-      setPipelineCompletedAppearance(currentSession);
-    }
-    // Always redraw edges after the panel becomes visible
-    requestAnimationFrame(() => drawEdges());
   } else if (view === "report") {
     els.viewReport.classList.add("active");
+    // Repainting edge nodes safely to clean graphics memory
     clearTimeout(edgeDrawTimeout);
   }
 }
@@ -359,27 +329,6 @@ function executeResearch() {
   els.toolPillsList.innerHTML = `<span class="empty-shelf shadow-none text-xs text-gray-500">None invoked yet</span>`;
   els.activeAgentDisplay.textContent = "clarifier";
   
-  // Set skeleton loader for the report preview
-  els.reportBodyContainer.innerHTML = `
-    <div class="report-skeleton-container">
-      <div class="skeleton-shimmer-row header"></div>
-      <div class="skeleton-shimmer-row body-lg"></div>
-      <div class="skeleton-shimmer-row body-md"></div>
-      <div class="skeleton-shimmer-row body-lg"></div>
-      <div class="skeleton-shimmer-row body-sm"></div>
-    </div>
-  `;
-
-  // Reset pipeline header to active run state
-  if (els.pipelineStatusBadge) {
-    els.pipelineStatusBadge.textContent = "ACTIVE RUN";
-    els.pipelineStatusBadge.style.background = "";
-    els.pipelineStatusBadge.style.color = "";
-    els.pipelineStatusBadge.style.borderColor = "";
-  }
-  if (els.btnCancelPipeline) els.btnCancelPipeline.style.display = "";
-  if (els.btnViewReport) els.btnViewReport.style.display = "none";
-  
   switchToView("pipeline");
   drawEdges();
 
@@ -458,16 +407,10 @@ function executeResearch() {
   // Generic SSE stream closed/error listener
   eventSource.onerror = (err) => {
     console.error("SSE Connection dropped or channel parsed invalid parameters.", err);
+    // Real-time server streaming can close cleanly after data completion, don't trigger error state arbitrarily if report exists
     const currentSession = sessions.find(s => s.id === activeSessionId);
     if (currentSession && currentSession.status === "running") {
-      if (currentSession.logs.length <= 4) {
-        eventSource?.close();
-        eventSource = null;
-        triggerToast("Backend server offline. Running in interactive Demo/Simulation mode.", "info");
-        runClientSideSimulation(query, newSessionId);
-      } else {
-        terminatePipelineError("Standard gateway timeout or stream disconnected prematurely.");
-      }
+      terminatePipelineError("Standard gateway timeout or stream disconnected prematurely.");
     }
   };
 }
@@ -634,16 +577,6 @@ function completePipelineSuccess(markdownText: string) {
   appendConsoleLine("pipeline_complete: Full literature review compiled successfully.", "system-log-line text-emerald-400");
   drawEdges();
 
-  // Update pipeline header to completed state
-  if (els.pipelineStatusBadge) {
-    els.pipelineStatusBadge.textContent = "COMPLETED";
-    els.pipelineStatusBadge.style.background = "rgba(52, 211, 153, 0.15)";
-    els.pipelineStatusBadge.style.color = "#34d399";
-    els.pipelineStatusBadge.style.borderColor = "rgba(52, 211, 153, 0.3)";
-  }
-  if (els.btnCancelPipeline) els.btnCancelPipeline.style.display = "none";
-  if (els.btnViewReport) els.btnViewReport.style.display = "";
-
   const currentSession = sessions.find(s => s.id === activeSessionId);
   if (currentSession) {
     currentSession.status = "completed";
@@ -657,50 +590,6 @@ function completePipelineSuccess(markdownText: string) {
       triggerToast("Literature research pipeline completed successfully!", "success");
     }, 1500);
   }
-}
-
-// Restore the completed pipeline visual state when navigating back from report view
-function setPipelineCompletedAppearance(session: ResearchSession) {
-  // Restore query display
-  els.pipelineQueryDisplay.textContent = session.query;
-
-  // Update status badge
-  if (els.pipelineStatusBadge) {
-    els.pipelineStatusBadge.textContent = "COMPLETED";
-    els.pipelineStatusBadge.style.background = "rgba(52, 211, 153, 0.15)";
-    els.pipelineStatusBadge.style.color = "#34d399";
-    els.pipelineStatusBadge.style.borderColor = "rgba(52, 211, 153, 0.3)";
-  }
-
-  // Show/hide correct buttons
-  if (els.btnCancelPipeline) els.btnCancelPipeline.style.display = "none";
-  if (els.btnViewReport) els.btnViewReport.style.display = "";
-
-  // Timer display
-  if (session.elapsedTime) {
-    els.pipelineTimer.textContent = session.elapsedTime;
-  }
-
-  // Restore active agent display
-  els.activeAgentDisplay.textContent = "formatter";
-
-  // Restore console logs
-  els.consoleStream.innerHTML = "";
-  session.logs.forEach(log => {
-    const line = document.createElement("div");
-    line.className = "system-log-line";
-    line.textContent = log;
-    els.consoleStream.appendChild(line);
-  });
-  els.consoleStream.scrollTop = els.consoleStream.scrollHeight;
-
-  // Mark all nodes as completed in the DAG
-  AGENT_ORDER.forEach(agent => {
-    const node = document.getElementById(`node-${agent}`);
-    if (node) node.className = "dag-node agent-node completed";
-  });
-  const rootNode = document.getElementById("node-root");
-  if (rootNode) rootNode.className = "dag-node root-node completed";
 }
 
 // Terminate pipeline in error state
@@ -735,30 +624,7 @@ function terminatePipelineError(errorMessage: string) {
 
 // User Action Cancel Pipeline Button
 function cancelActivePipeline(triggerUINotify: boolean = true) {
-  clearSimulatedTimeouts();
-
-  if (!eventSource) {
-    const currentSession = sessions.find(s => s.id === activeSessionId);
-    if (currentSession && currentSession.status === "running") {
-      currentSession.status = "error";
-      appendConsoleLine("Pipeline halted: Ingestion flow closed by user.", "system-log-line text-rose-400");
-      saveSessions();
-      renderHistory();
-
-      if (currentSession.activeAgent) {
-        const node = document.getElementById(`node-${currentSession.activeAgent}`);
-        if (node) {
-          node.className = "dag-node agent-node error";
-        }
-      }
-      drawEdges();
-      stopPipelineTimer();
-      if (triggerUINotify) {
-        triggerToast("Research pipeline halted by user.", "warn");
-      }
-    }
-    return;
-  }
+  if (!eventSource) return;
 
   eventSource.close();
   eventSource = null;
@@ -851,13 +717,13 @@ function drawEdges() {
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   defs.innerHTML = `
     <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(255,255,255,0.1)" />
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(255,255,255,0.15)" />
     </marker>
     <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
     </marker>
     <marker id="arrow-completed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
     </marker>
   `;
   els.svgCanvas.appendChild(defs);
@@ -897,21 +763,21 @@ function drawEdges() {
     path.setAttribute("d", pathAttr);
     
     // State-based Styling mapping
-    let strokeColor = "rgba(255, 255, 255, 0.05)";
+    let strokeColor = "rgba(255, 255, 255, 0.08)";
     let markerId = "arrow";
     let isDashed = type === "flow";
 
     if (isCompleted) {
-      strokeColor = "#10b981";
+      strokeColor = "#34d399";
       markerId = "arrow-completed";
       isDashed = false;
     } else if (isActive) {
-      strokeColor = "#06b6d4";
+      strokeColor = "#818cf8";
       markerId = "arrow-active";
     }
 
     path.setAttribute("stroke", strokeColor);
-    path.setAttribute("stroke-width", isActive ? "2.2" : "1.3");
+    path.setAttribute("stroke-width", isActive ? "2" : "1.3");
     path.setAttribute("fill", "none");
     path.setAttribute("marker-end", `url(#${markerId})`);
     
@@ -925,7 +791,7 @@ function drawEdges() {
     if (isActive) {
       const animatedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       animatedPath.setAttribute("d", pathAttr);
-      animatedPath.setAttribute("stroke", "#14b8a6");
+      animatedPath.setAttribute("stroke", "#a78bfa");
       animatedPath.setAttribute("stroke-width", "2.5");
       animatedPath.setAttribute("fill", "none");
       animatedPath.className.baseVal = "dag-edge-animated";
@@ -1001,23 +867,6 @@ function drawEdges() {
       }
     });
   }
-
-  // 5. Validator tool mapping (validate_citations under validator node)
-  const validatorNode = document.getElementById("node-validator");
-  if (validatorNode) {
-    const validatorTools = [
-      "node-tool-validate_citations"
-    ];
-
-    validatorTools.forEach(toolId => {
-      const toolEl = document.getElementById(toolId);
-      if (toolEl) {
-        const isValidatorCompleted = activeIdx > AGENT_ORDER.indexOf("validator") || currentSession?.status === "completed";
-        const isValidatorActive = activeAgent === "validator" && currentSession?.status === "running";
-        createEdge(validatorNode, toolEl, "tree", isValidatorActive, isValidatorCompleted);
-      }
-    });
-  }
 }
 
 // Spark transient dot traveling along edge when tool fires
@@ -1042,8 +891,8 @@ function pulseEdgeAnimation(agentName: string, toolNodeId: string) {
 
   // Spawn an overlay particle traveling along this spec
   const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  dot.setAttribute("r", "4.5");
-  dot.setAttribute("fill", "#14b8a6");
+  dot.setAttribute("r", "5");
+  dot.setAttribute("fill", "#c084fc");
   
   const animateMotion = document.createElementNS("http://www.w3.org/2000/svg", "animateMotion");
   animateMotion.setAttribute("path", pathAttr);
@@ -1069,257 +918,3 @@ function escapeHTML(str: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
-function generateMockReport(query: string): string {
-  return `# Literature Review: Systematic Analysis of Research Inquiry
-
-## Executive Summary
-This systematic review synthesizes key scientific literature exploring: **${query}**. 
-
-> **Central Hypothesis Matrix:** A multi-agent network indexing PubMed (MEDLINE) and arXiv indicates unified agreement that specific structural pathway mutations dictate treatment durability, though optimal therapeutic vehicles remain the major bottleneck.
-
-## Methodology & Evidence Ingestion
-A sequential extraction protocol successfully filtered a baseline cohort comprising 18 primary studies on **${query}** using keywords index mapping and citation networking.
-
-| Registry ID | Research Source | Experimental Subjects | Study Duration | Evidence Strength |
-|:---|:---|:---|:---|:---|
-| PMID: 34509121 | Dr. R. Jenkins et al. (Stanford Oncology) | Somatic cohort (n=120) | 24 Months | Grade A (Randomized Controlled) |
-| PMID: 32219084 | London Immunobiology Group | In-vitro model blastoids | 12 Months | Grade B (Cellular Culture) |
-| PMID: 38221014 | Dr. J. Sterling et al. | Clinical Cohort (n=45) | 18 Months | Grade A (Multi-center study) |
-
-## Consolidated Scientific Analysis
-Synthesizing recent clinical trial results indicates high therapeutic potential [PMID: 34509121]. Current delivery platforms, particularly lipid nanoparticle (LNP) matrices, provide outstanding targeting efficacy but elicit localized, transient immunogenic actions which require careful dosing regimens [PMID: 38221014].
-
-- **Off-Target Mechanics**: Editing specificity was validated utilizing somatic assays. Off-target mutations are down 80% with next-generation nucleases.
-- **Delivery Bottlenecks**: Somatic vectors have a high correlation with long-term transcription longevity [PMID: 32219084].
-
-## Bibliography
-- Jenkins R, et al. *Cas9 base editors for Somatic correction of hemoglobinopathies.* **Nature Biotech**. (2025). [PMID: 34509121]
-- Sterling J, et al. *Citations inside clustered nucleosomes.* **Journal of Bio-Oncology**. (2024). [PMID: 32219084]
-- Arisaka M, et al. *LNP delivery mechanisms in clinical mRNA vaccine formulations.* **Therapeutic Delivery Review**. (2026). [PMID: 38221014]
-
-## Citation Integrity Note
-This review contains bibliography citations that have been validated against PubMed registry databases. 100% of the PMIDs listed correspond to verified scientific literature.
-`;
-}
-
-function runClientSideSimulation(query: string, sessionId: string) {
-  clearSimulatedTimeouts();
-  
-  const scheduleEvent = (delayMs: number, action: () => void) => {
-    const handle = setTimeout(() => {
-      const cur = sessions.find(s => s.id === sessionId);
-      if (cur && cur.status === "running") {
-        action();
-      }
-    }, delayMs);
-    simulatedTimeouts.push(handle);
-  };
-
-  let cumulativeTime = 500;
-
-  // --- CLARIFIER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("clarifier", "active");
-  });
-  cumulativeTime += 800;
-
-  const clarifierLogs = [
-    "Ingested baseline parameters for user inquiry.",
-    `Dissecting grammatical semantics of query: "${query}"`,
-    "Deconstructing focus coordinates: identifying cellular target sites, pathway interventions, and mechanism definitions.",
-    `Refining search coordinates. Refined focus parameters loaded successfully.`
-  ];
-  clarifierLogs.forEach(log => {
-    scheduleEvent(cumulativeTime, () => {
-      appendConsoleLine(log + "\n", "agent-output-block");
-    });
-    cumulativeTime += 800;
-  });
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("clarifier", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- PLANNER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("planner", "active");
-  });
-  cumulativeTime += 800;
-
-  const plannerLogs = [
-    "Analyzing search parameters against indexed academic databases.",
-    "Formulating structured query paths...",
-    "Databases selected: PubMed (MEDLINE cohort), arXiv (preprints/CS-bio), OpenAlex (indexing nodes).",
-    "Forming search guidance strings. Mesh terms generated: ['gene-editing', 'somatic mechanics', 'efficacy matrices']."
-  ];
-  plannerLogs.forEach(log => {
-    scheduleEvent(cumulativeTime, () => {
-      appendConsoleLine(log + "\n", "agent-output-block");
-    });
-    cumulativeTime += 700;
-  });
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("planner", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- SEARCHER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("searcher", "active");
-  });
-  cumulativeTime += 600;
-
-  const searcherTools = [
-    "search_arxiv",
-    "search_pubmed",
-    "search_openalex",
-    "filter_papers",
-    "rank_papers",
-    "extract_abstracts",
-    "traverse_citations"
-  ];
-  searcherTools.forEach(tool => {
-    scheduleEvent(cumulativeTime, () => {
-      invokeToolVisual("searcher", tool);
-      appendConsoleLine(`Successfully invoked tool [${tool}]. Ingested academic metadata.\n`, "agent-output-block");
-    });
-    cumulativeTime += 1000;
-  });
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Successfully consolidated 24 unique studies mapping directly to query parameters.\n", "agent-output-block");
-  });
-  cumulativeTime += 400;
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("searcher", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- ANALYZER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("analyzer", "active");
-  });
-  cumulativeTime += 600;
-
-  const analyzerTools = ["filter_papers", "extract_abstracts"];
-  analyzerTools.forEach(tool => {
-    scheduleEvent(cumulativeTime, () => {
-      invokeToolVisual("analyzer", tool);
-      appendConsoleLine(`Analyzed study cohort via tool [${tool}]. Extracted experimental methodologies.\n`, "agent-output-block");
-    });
-    cumulativeTime += 1200;
-  });
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Extracted abstract variables: filtered studies with Grade A randomized controllers or high-sample sizes.\n", "agent-output-block");
-  });
-  cumulativeTime += 400;
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("analyzer", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- REASONER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("reasoner", "active");
-  });
-  cumulativeTime += 800;
-
-  const reasonerLogs = [
-    "Contradiction detection: checking for diverging claims regarding delivery vector efficiency.",
-    "Synthesizing trial outputs and evaluating experimental duration controls.",
-    "Evidence Grade Calculation: Compiled Grade A parameters for Hematology reviews."
-  ];
-  reasonerLogs.forEach(log => {
-    scheduleEvent(cumulativeTime, () => {
-      appendConsoleLine(log + "\n", "agent-output-block");
-    });
-    cumulativeTime += 900;
-  });
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("reasoner", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- SYNTHESIZER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("synthesizer", "active");
-  });
-  cumulativeTime += 800;
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Compiling draft literature outline...\n", "agent-output-block");
-  });
-  cumulativeTime += 600;
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Writing structural chapters containing Methodology, Results Table, and bibliography references.\n", "agent-output-block");
-  });
-  cumulativeTime += 800;
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("synthesizer", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- VALIDATOR ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("validator", "active");
-  });
-  cumulativeTime += 800;
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Extracting bibliography registries for citation validation...\n", "agent-output-block");
-  });
-  cumulativeTime += 500;
-
-  scheduleEvent(cumulativeTime, () => {
-    invokeToolVisual("validator", "validate_citations");
-    appendConsoleLine("Successfully cross-referenced PMIDs against PubMed National Library database registries.\n", "agent-output-block");
-  });
-  cumulativeTime += 1000;
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Citation Integrity Check: 100% of inline PMIDs correspond to actual study registry metrics.\n", "agent-output-block");
-  });
-  cumulativeTime += 600;
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("validator", "completed");
-  });
-  cumulativeTime += 400;
-
-  // --- FORMATTER ---
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("formatter", "active");
-  });
-  cumulativeTime += 800;
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Polishing academic markdown format.\n", "agent-output-block");
-  });
-  cumulativeTime += 500;
-
-  scheduleEvent(cumulativeTime, () => {
-    appendConsoleLine("Parsing inline citation tags for PMID cross-indexes.\n", "agent-output-block");
-  });
-  cumulativeTime += 600;
-
-  scheduleEvent(cumulativeTime, () => {
-    updateAgentStatus("formatter", "completed");
-  });
-  cumulativeTime += 500;
-
-  // --- COMPLETE ---
-  scheduleEvent(cumulativeTime, () => {
-    const report = generateMockReport(query);
-    completePipelineSuccess(report);
-  });
-}
-
